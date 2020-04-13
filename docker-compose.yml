@@ -1,0 +1,14 @@
+version : '2'
+
+services:
+   web:
+      build: alpine/.
+      ports:
+       - "80:80"
+      volumes:
+       - ./www/:/var/www/
+      environment:
+       - DOCKER_HOST="127.0.0.1"
+       - DOCKER_PORT=80
+       
+
