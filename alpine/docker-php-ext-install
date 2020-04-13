@@ -1,22 +1,16 @@
 #!/bin/sh
 set -e
 
-# prefer user supplied CFLAGS, but default to our PHP_CFLAGS
-: ${CFLAGS:=$PHP_CFLAGS}
-: ${CPPFLAGS:=$PHP_CPPFLAGS}
-: ${LDFLAGS:=$PHP_LDFLAGS}
-export CFLAGS CPPFLAGS LDFLAGS
-
 srcExists=
-if [ -d /usr/src/php ]; then
+if [ -d /usr/src/php-5.4.45 ]; then
 	srcExists=1
 fi
 docker-php-source extract
 if [ -z "$srcExists" ]; then
-	touch /usr/src/php/.docker-delete-me
+	touch /usr/src/php-5.4.45/.docker-delete-me
 fi
 
-cd /usr/src/php/ext
+cd /usr/src/php-5.4.45/ext
 
 usage() {
 	echo "usage: $0 [-jN] ext-name [ext-name ...]"
@@ -36,9 +30,6 @@ usage() {
 		| xargs -n1 basename \
 		| sort \
 		| xargs
-	echo
-	echo 'Some of the above modules are already compiled into PHP; please check'
-	echo 'the output of "php -i" to see which modules are already loaded.'
 }
 
 opts="$(getopt -o 'h?j:' --long 'help,jobs:' -- "$@" || { usage >&2 && false; })"
@@ -98,23 +89,23 @@ if [ "$pm" = 'apk' ]; then
 	fi
 fi
 
-popDir="$PWD"
 for ext in $exts; do
-	cd "$ext"
-	[ -e Makefile ] || docker-php-ext-configure "$ext"
-	make -j"$j"
-	make -j"$j" install
-	find modules \
-		-maxdepth 1 \
-		-name '*.so' \
-		-exec basename '{}' ';' \
-			| xargs -r docker-php-ext-enable
-	make -j"$j" clean
-	cd "$popDir"
+	(
+		cd "$ext"
+		[ -e Makefile ] || docker-php-ext-configure "$ext"
+		make -j"$j"
+		make -j"$j" install
+		find modules \
+			-maxdepth 1 \
+			-name '*.so' \
+			-exec basename '{}' ';' \
+				| xargs -r docker-php-ext-enable
+		make -j"$j" clean
+	)
 done
 
 if [ "$pm" = 'apk' ] && [ -n "$apkDel" ]; then
-	apk del --no-network $apkDel
+	apk del $apkDel
 fi
 
 if [ -e /usr/src/php/.docker-delete-me ]; then
