@@ -183,6 +183,6 @@ ADD apache.key /etc/apache2/sslconf/apache.key
 
 #integration des variables d'environnement
 ENV APACHE_LOG_DIR /var/log/apache2
-
+ENTRYPOINT ["/bin/bash"]
 #ouverture des ports
 EXPOSE 80 443
